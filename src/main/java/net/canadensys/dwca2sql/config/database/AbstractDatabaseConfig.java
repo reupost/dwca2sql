@@ -10,7 +10,7 @@ package net.canadensys.dwca2sql.config.database;
 public abstract class AbstractDatabaseConfig {
 	
 	//SQL statement
-	protected String defaultCreateTableStatement = "CREATE TABLE %s (%s);"; 
+	protected String defaultCreateTableStatement = "SET CLIENT_ENCODING TO 'utf8'; DROP TABLE IF EXISTS %s; CREATE TABLE %s (%s);";
 	protected String insertIntoStatement = "INSERT INTO %s (%s) VALUES ";
 	
 	//Default values

@@ -55,8 +55,10 @@ public class DwcaSQLProcessor {
 	public List<Dwca2SQLReport> processDarwinCoreArchive(Archive dwcArchive) {
 		List<Dwca2SQLReport> reportList = new ArrayList<Dwca2SQLReport>();
 		reportList.add(processDwcaCore(dwcArchive.getCore(),false));
-		for(ArchiveFile extension: dwcArchive.getExtensions()){
-			reportList.add(processDwcaCore(extension,true));
+		if(appConfig.isProcessExtensions()) {
+			for (ArchiveFile extension : dwcArchive.getExtensions()) {
+				reportList.add(processDwcaCore(extension, true));
+			}
 		}
 		return reportList;
 	}
@@ -73,6 +75,7 @@ public class DwcaSQLProcessor {
 		Dwca2SQLReport report = new Dwca2SQLReport(FilenameUtils.getBaseName(dwcaComponent.getTitle()).toUpperCase(), appConfig.getDestinationFile());
 		
 		//use the last part of the rowType as table name
+		//problem is, GBIF is using the same rowtype for core and extension
 		String tableName = dwcaComponent.getRowType().substring(dwcaComponent.getRowType().lastIndexOf("/")+1).toLowerCase();
 		if(appConfig.getDestinationTablePrefix()!= null){
 			tableName = appConfig.getDestinationTablePrefix()+"_"+tableName;
@@ -252,7 +255,7 @@ public class DwcaSQLProcessor {
 		
 		String columnsDef = StringUtils.join(indexedColumns, ',');
 		
-		String createStatement = String.format(dbConfig.getCreateTableStatement(), tableName, columnsDef);
+		String createStatement = String.format(dbConfig.getCreateTableStatement(), tableName, tableName, columnsDef);
 		return createStatement;
 	}
 	
@@ -279,17 +282,21 @@ public class DwcaSQLProcessor {
 		List<ArchiveField> sortedFieldList = dwcaCore.getFieldsSorted();
 		
 		for(ArchiveField currArField : sortedFieldList){
-			if(currArField.getIndex() != null){
-				if(currArField.getIndex().equals(idIndex)){
-					idColumnIncluded = true;
+			//System.out.println(currArField.getTerm().toString());
+			if(!currArField.getTerm().toString().equals("http://rs.gbif.org/terms/1.0/typifiedName")) { //there is a problem with this field, it is omitted from the value list for the insert stmt
+				if (currArField.getIndex() != null) {
+					if (currArField.getIndex().equals(idIndex)) {
+						idColumnIncluded = true;
+					}
+					indexedColumns.add(SimpleSQLFormatHelper.formatSQLStatementComponent(currArField.getTerm().simpleName(), insertStatementQuotedColumn));
+					indexedColumnsType.add(getColumnTypeEnum(currArField));
+				} else {
+					nonIndexedColumns.add(SimpleSQLFormatHelper.formatSQLStatementComponent(currArField.getTerm().simpleName(), insertStatementQuotedColumn));
+					nonIndexedColumnsType.add(getColumnTypeEnum(currArField));
+					columnDefaultValues.add(dbConfig.getStringSeparatorChar() + SimpleSQLFormatHelper.escapeSql(currArField.getDefaultValue()) + dbConfig.getStringSeparatorChar());
 				}
-				indexedColumns.add(SimpleSQLFormatHelper.formatSQLStatementComponent(currArField.getTerm().simpleName(),insertStatementQuotedColumn));
-				indexedColumnsType.add(getColumnTypeEnum(currArField));
-			}
-			else{
-				nonIndexedColumns.add(SimpleSQLFormatHelper.formatSQLStatementComponent(currArField.getTerm().simpleName(),insertStatementQuotedColumn));
-				nonIndexedColumnsType.add(getColumnTypeEnum(currArField));
-				columnDefaultValues.add(dbConfig.getStringSeparatorChar() + SimpleSQLFormatHelper.escapeSql(currArField.getDefaultValue()) + dbConfig.getStringSeparatorChar());
+			} else {
+				System.out.println("Skipping " + currArField.getTerm().toString());
 			}
 		}
 		

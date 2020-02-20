@@ -15,6 +15,7 @@ public class Dwca2SQLConfig {
 	private boolean createTableStatementRequired = false;
 	private boolean insertStatementRequired = false;
 	private boolean deleteStatementRequired = false;
+	private boolean processExtensions = false;
 	
 	private String destinationTablePrefix = null;
 	private String destinationFile;
@@ -59,6 +60,12 @@ public class Dwca2SQLConfig {
 	}
 	public boolean isDeleteStatementRequired() {
 		return deleteStatementRequired;
+	}
+
+	public boolean isProcessExtensions() { return processExtensions; }
+
+	public void setProcessExtensions(boolean processExtensions) {
+		this.processExtensions = processExtensions;
 	}
 
 	public void setDestinationFile(String destinationFile){

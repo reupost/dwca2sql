@@ -30,6 +30,8 @@ public class CliManager {
 	private static final String CLI_PREFIX = "p";
 	private static final String CLI_DATABASE = "d";
 	private static final String CLI_FORCE = "f";
+	private static final String CLI_EXTENSIONS = "e";
+	private static final String CLI_LONG_EXTENSIONS = "extensions";
 	
 	private static final String CLI_MAX_ROW = "x";
 	private static final String CLI_LONG_MAX_ROW = "max-row-per-insert";
@@ -43,7 +45,7 @@ public class CliManager {
 		cmdLineOptions.addOption(CLI_PREFIX, true, "table name prefix");
 		cmdLineOptions.addOption(CLI_DATABASE, true, "database type (mysql,postgres)");
 		cmdLineOptions.addOption(CLI_FORCE, false, "force, do not ask before overwriting existing file");
-		
+		cmdLineOptions.addOption(CLI_EXTENSIONS,CLI_LONG_EXTENSIONS, false, "process extensions as well as core");
 		cmdLineOptions.addOption(CLI_MAX_ROW,CLI_LONG_MAX_ROW, true, "maximum of rows to include in a single INSERT statement. Default 100.");
 	}
 	
@@ -72,6 +74,7 @@ public class CliManager {
 		String database = cmdLine.getOptionValue(CLI_DATABASE);
 		boolean forceMode = cmdLine.hasOption(CLI_FORCE);
 		String maxRowPerInsert = cmdLine.getOptionValue(CLI_MAX_ROW,Dwca2SQLConfig.DEFAULT_MAX_ROWS_PER_INSERT_STATEMENT.toString());
+		boolean processExtensions = cmdLine.hasOption(CLI_EXTENSIONS);
 		
 		Dwca2SQLConfig dwcaConfig = new Dwca2SQLConfig();
 		dwcaConfig.setSourceFile(dwcaFilePath);
@@ -82,6 +85,8 @@ public class CliManager {
 		dwcaConfig.setDestinationTablePrefix(tablePrefix);
 		dwcaConfig.setDatabaseType(database);
 		dwcaConfig.setForceMode(forceMode);
+
+		dwcaConfig.setProcessExtensions(processExtensions);
 		
 		try{
 			dwcaConfig.setMaxRowsPerInsertStatement(Integer.parseInt(maxRowPerInsert));
