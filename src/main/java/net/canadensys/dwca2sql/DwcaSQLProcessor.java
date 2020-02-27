@@ -38,6 +38,8 @@ public class DwcaSQLProcessor {
 	private AbstractDatabaseConfig dbConfig = null;
 	private final String createStatementQuotedColumn;
 	private final String insertStatementQuotedColumn;
+
+	private int SKIPPED_COL = -1;
 	
 	public DwcaSQLProcessor(Dwca2SQLConfig appConfig, AbstractDatabaseConfig dbConfig){
 		if(appConfig==null || dbConfig == null){
@@ -92,6 +94,7 @@ public class DwcaSQLProcessor {
 			InsertPreparationResult prepResult =  prepareInsertStatement(dwcaComponent);
 			String columnNames = StringUtils.join(prepResult.getColumnNamesList(),',');
 			ColumnTypeEnum[] columnType = prepResult.getColumnType().toArray(new ColumnTypeEnum[0]);
+
 			String columnsDefaultValuesStr = StringUtils.join(prepResult.getColumnDefaultValues(), ",");
 			String insertIntoStatement = String.format(dbConfig.getInsertIntoStatement(), tableName, columnNames);
 			
@@ -99,7 +102,8 @@ public class DwcaSQLProcessor {
 			StringBuilder columnValues = new StringBuilder(500);
 			String[] currLine;
 			Iterator<String[]> rowsIt;
-			
+			int columnNamesListSize = prepResult.getColumnNamesList().size();
+
 			try {
 				FileUtils.writeLines(new File(appConfig.getDestinationFile()), OUTPUT_FILE_ENCODING, toFile, appendToExistingFile);
 				toFile.clear();
@@ -130,6 +134,12 @@ public class DwcaSQLProcessor {
 						}
 						else{
 							columnValues.append(",");
+							if (col == SKIPPED_COL) {
+								if (columnNamesListSize > currLine.length) {
+									columnValues.append(dbConfig.getNullValue());
+									columnValues.append(",");
+								}
+							}
 						}
 						
 						//make sure that the string doesn't contain NULL character (\0).
@@ -171,6 +181,7 @@ public class DwcaSQLProcessor {
 									columnValues.append(currElement);
 								}
 								break;
+
 						}
 						col++;
 					}
@@ -280,10 +291,15 @@ public class DwcaSQLProcessor {
 		boolean idColumnIncluded = false;
 		
 		List<ArchiveField> sortedFieldList = dwcaCore.getFieldsSorted();
-		
+
+		int colno = -1;
 		for(ArchiveField currArField : sortedFieldList){
+			colno++;
 			//System.out.println(currArField.getTerm().toString());
-			if(!currArField.getTerm().toString().equals("http://rs.gbif.org/terms/1.0/typifiedName")) { //there is a problem with this field, it is omitted from the value list for the insert stmt
+			if(currArField.getTerm().toString().equals("http://rs.gbif.org/terms/1.0/typifiedName")) {
+				SKIPPED_COL = colno;
+			}
+			//if(!currArField.getTerm().toString().equals("http://rs.gbif.org/terms/1.0/typifiedName")) { //there is a problem with this field, it is sometimes omitted from the value list for the insert stmt
 				if (currArField.getIndex() != null) {
 					if (currArField.getIndex().equals(idIndex)) {
 						idColumnIncluded = true;
@@ -295,9 +311,10 @@ public class DwcaSQLProcessor {
 					nonIndexedColumnsType.add(getColumnTypeEnum(currArField));
 					columnDefaultValues.add(dbConfig.getStringSeparatorChar() + SimpleSQLFormatHelper.escapeSql(currArField.getDefaultValue()) + dbConfig.getStringSeparatorChar());
 				}
-			} else {
-				System.out.println("Skipping " + currArField.getTerm().toString());
-			}
+			//} else {
+			//	System.out.println("Skipping " + currArField.getTerm().toString());
+			//	SKIPPED_COL = colno;
+			//}
 		}
 		
 		//if the id column was not added
